@@ -1,3 +1,4 @@
+const Joi = require("joi");
 const mongoose = require("mongoose");
 
 const UserSchema = new mongoose.Schema(
@@ -37,5 +38,14 @@ const UserSchema = new mongoose.Schema(
   }
 );
 
+exports.UserValidate = Joi.object({
+  lastName: Joi.string(),
+  fullName: Joi.string(),
+  phoneNumber: Joi.string().pattern(new RegExp("/^0[3-9]{9}$/")),
+  email: Joi.string().email(),
+  password: Joi.string(),
+});
+
 const UserModel = mongoose.model("users", UserSchema);
+
 module.exports = UserModel;

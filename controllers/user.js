@@ -1,8 +1,10 @@
-const UserModel = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-const Validation = require("../utils/validation");
+const logger = require("../configs/logger.config");
+
+const { UserValidate } = require("../models/User");
+const UserModel = require("../models/User");
 
 const UserController = {
   //   GET: /api/usersList
@@ -50,7 +52,9 @@ const UserController = {
       const user = await UserModel.create(newUser);
 
       if (user) {
-        res.status(200).json({ message: "Posted" });
+        const message = `[CREATE] Created a new user with email is ${newUser.email}`;
+        res.status(200).json({ message });
+        logger.info(message);
       }
     } catch (error) {
       res.status(400).json({ Error: "Something went wrong!" });
@@ -76,9 +80,16 @@ const UserController = {
       );
 
       if (updatedUser) {
-        res.json({ message: true, "Update successfully.": updateData });
+        res.json({
+          message: true,
+          data: updateData,
+        });
+        logger.warn(`[UPDATE] Updated user info with ID: ${req.params.id}`);
       } else {
         res.json({ message: false });
+        logger.error(
+          `[UPDATE] Failed to update user with ID: ${req.params.id}`
+        );
       }
     } catch (error) {
       res.json({ Error: "Something went wrong!" });
@@ -92,8 +103,12 @@ const UserController = {
 
       if (deletedUser) {
         res.status(200).json({ message: true });
+        logger.warn(`[DELETE] Deleted user info with ID: ${req.params.id}.`);
       } else {
         res.status(400).json({ message: false });
+        logger.error(
+          `[DELETE] Failed to delete user with ID: ${req.params.id}.`
+        );
       }
     } catch (error) {
       res.json({ Error: "Something went wrong!" });
@@ -105,10 +120,14 @@ const UserController = {
     try {
       const { phoneNumber, password } = req.body;
 
-      // Thực hiện kiểm tra dữ liệu nhập vào của người dùng
-      const { value, error } = await Validation.UserLoginSchema.validate(
-        req.body
-      );
+      const { error } = UserValidate.validate({ phoneNumber, password });
+
+      if (error) {
+        res.status(400).json({
+          message: "Validate failed.",
+          errors: error.details,
+        });
+      }
 
       // Step 1: Check user on database
       const user = await UserModel.findOne({ phoneNumber: phoneNumber });
@@ -138,6 +157,9 @@ const UserController = {
           accessToken: accessToken,
           ...payload,
         });
+
+        logger.warning(`[LOGIN] User ${req.params.id} logged.`);
+        
       } else {
         res.status(400).json({ error: "Invalid password." });
       }
@@ -181,6 +203,9 @@ const UserController = {
           { new: true }
         );
         res.status(200).json({ message: "Pushed to cart." });
+        logger.warning(
+          `[UPDATE] User ${req.params.id} just added to their cart.`
+        );
       } else {
         res.status(400).json({ message: "Can not push to cart." });
       }
